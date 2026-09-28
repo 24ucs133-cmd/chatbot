@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ChatGPT • n8n Intelligent Assistant</title>
+  <meta name="description" content="A state-of-the-art ChatGPT interface connected to n8n AI workflow with streaming typewriter responses, markdown rendering, syntax highlighting, voice input, and multi-session management.">
+  <link rel="icon" type="image/jpeg" href="assets/bot_avatar.jpg">
+
+  <!-- Google Fonts: Inter & Fira Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Highlight.js for Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css" id="hljs-theme">
+
+  <!-- Marked.js, DOMPurify & Highlight.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout" id="appLayout">
+    <!-- Mobile Overlay Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Collapsible Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="new-chat-btn" id="newChatBtn" title="Start a new chat (Ctrl + K)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New chat</span>
+          <kbd class="shortcut-badge">⌘K</kbd>
+        </button>
+
+        <button class="sidebar-close-btn" id="sidebarCloseBtn" title="Collapse sidebar">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Search in conversations -->
+      <div class="search-box-container">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="chatSearchInput" placeholder="Search conversations..." autocomplete="off">
+      </div>
+
+      <!-- Chat History Groups -->
+      <div class="chat-history-scroll" id="chatHistoryContainer">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Sidebar Footer User Profile & Settings -->
+      <div class="sidebar-footer">
+        <div class="webhook-indicator-pill" id="webhookStatusIndicator" title="Click to configure n8n Webhook">
+          <span class="status-pulse-dot"></span>
+          <span class="status-label">n8n Connected</span>
+          <span class="latency-label" id="latencyDisplay">cloud</span>
+        </div>
+
+        <div class="user-profile-row" id="userProfileBtn">
+          <div class="user-avatar-wrap">
+            <img src="assets/user_avatar.jpg" alt="User avatar" class="user-avatar-img">
+            <span class="pro-badge">PRO</span>
+          </div>
+          <div class="user-details">
+            <span class="user-name">User Account</span>
+            <span class="user-plan">ICICI & n8n Assistant</span>
+          </div>
+          <button class="settings-trigger-btn" id="settingsBtn" title="Settings">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="mainContent">
+      <!-- Top Navigation Header -->
+      <header class="top-nav">
+        <div class="top-nav-left">
+          <button class="icon-btn sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle sidebar">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+          </button>
+
+          <div class="model-dropdown-wrapper" id="modelDropdownWrapper">
+            <button class="model-selector-btn" id="modelSelectorBtn">
+              <span class="model-badge">ChatGPT 4o</span>
+              <span class="model-subtitle">ICICI Banking AI</span>
+              <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="model-menu" id="modelMenu">
+              <div class="model-option active" data-model="gpt-4o">
+                <div class="model-opt-info">
+                  <div class="model-opt-name">ChatGPT 4o • ICICI Bank Expert</div>
+                  <div class="model-opt-desc">Connected directly to your live n8n workflow</div>
+                </div>
+                <svg class="icon check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <div class="model-option" data-model="gpt-4o-mini">
+                <div class="model-opt-info">
+                  <div class="model-opt-name">Fast Response Mode</div>
+                  <div class="model-opt-desc">Optimized for quick banking summaries</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="top-nav-right">
+          <!-- Webhook Health Pill -->
+          <div class="nav-status-badge" id="navStatusBadge">
+            <span class="ping-dot"></span>
+            <span>n8n Active</span>
+          </div>
+
+          <!-- Export Chat -->
+          <div class="export-dropdown-wrapper">
+            <button class="icon-btn" id="exportBtn" title="Export conversation">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+            <div class="export-menu" id="exportMenu">
+              <button class="export-option" id="exportMarkdownBtn">Export as Markdown (.md)</button>
+              <button class="export-option" id="exportJsonBtn">Export as JSON (.json)</button>
+              <button class="export-option" id="exportTextBtn">Export as Plain Text (.txt)</button>
+            </div>
+          </div>
+
+          <!-- Clear Current Chat -->
+          <button class="icon-btn" id="clearChatBtn" title="Clear current chat">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+
+          <!-- Theme Toggle Button -->
+          <button class="icon-btn theme-toggle-btn" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Chat Viewport -->
+      <div class="chat-viewport" id="chatViewport">
+        <div class="messages-track" id="messagesTrack">
+          <!-- Empty State (Shown when active chat is empty) -->
+          <div class="empty-state" id="emptyState">
+            <div class="empty-logo-glow">
+              <img src="assets/bot_avatar.jpg" alt="ChatGPT AI Bot" class="hero-bot-avatar">
+              <div class="hero-pulse-ring"></div>
+            </div>
+            <h1 class="hero-title">What can I help with today?</h1>
+            <p class="hero-subtitle">Connected to your live <strong>n8n AI Cloud Workflow</strong>. Ask any question about ICICI Credit Cards, eligibility, application processes, or general banking.</p>
+
+            <div class="prompt-cards-grid">
+              <button class="prompt-card" data-prompt="How do I apply for an ICICI Bank credit card online and offline?">
+                <div class="card-icon">💳</div>
+                <div class="card-content">
+                  <span class="card-heading">Apply for ICICI Card</span>
+                  <span class="card-desc">Step-by-step instructions for online & offline applications</span>
+                </div>
+                <svg class="card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+
+              <button class="prompt-card" data-prompt="What are the essential documents and eligibility criteria needed for an ICICI credit card?">
+                <div class="card-icon">📋</div>
+                <div class="card-content">
+                  <span class="card-heading">Documents & Eligibility</span>
+                  <span class="card-desc">PAN, identity, address proof & income verification details</span>
+                </div>
+                <svg class="card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+
+              <button class="prompt-card" data-prompt="Compare popular ICICI Bank credit cards like Amazon Pay, Coral, and Sapphiro. Which is best?">
+                <div class="card-icon">🌟</div>
+                <div class="card-content">
+                  <span class="card-heading">Compare Card Variants</span>
+                  <span class="card-desc">Amazon Pay, Coral, Rubyx, Platinum features & rewards</span>
+                </div>
+                <svg class="card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+
+              <button class="prompt-card" data-prompt="What security guidelines should I follow to protect my ICICI credit card and banking details?">
+                <div class="card-icon">🔒</div>
+                <div class="card-content">
+                  <span class="card-heading">Security & Safe Banking</span>
+                  <span class="card-desc">Crucial tips on OTP, CVV, PIN security and avoiding scams</span>
+                </div>
+                <svg class="card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Messages Container -->
+          <div class="messages-list" id="messagesList">
+            <!-- Messages rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Scroll to Bottom Button -->
+        <button class="scroll-bottom-btn" id="scrollBottomBtn" title="Scroll to bottom">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Floating Input Dock -->
+      <footer class="input-dock-container">
+        <!-- Attachment preview chip container -->
+        <div class="attachments-preview-bar" id="attachmentsPreviewBar" style="display: none;">
+          <div class="attachment-chip">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            <span class="attachment-name" id="attachmentName">file.txt</span>
+            <button class="attachment-remove-btn" id="attachmentRemoveBtn" title="Remove attachment">&times;</button>
+          </div>
+        </div>
+
+        <form class="input-form" id="chatForm">
+          <!-- Hidden file input -->
+          <input type="file" id="fileInput" accept=".txt,.json,.csv,.md,.pdf,.png,.jpg,.jpeg" style="display: none;">
+
+          <div class="input-toolbar-left">
+            <!-- Attach File Button -->
+            <button type="button" class="dock-btn" id="attachFileBtn" title="Attach file or document">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Expanding Textarea -->
+          <textarea
+            id="promptInput"
+            rows="1"
+            placeholder="Message ChatGPT or ask about ICICI banking..."
+            autocomplete="off"
+            autofocus
+          ></textarea>
+
+          <div class="input-toolbar-right">
+            <!-- Voice Dictation Button -->
+            <button type="button" class="dock-btn voice-btn" id="voiceBtn" title="Dictate message (Speech to text)">
+              <svg class="icon mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+
+            <!-- Send / Stop Button -->
+            <button type="submit" class="dock-btn send-btn" id="sendBtn" title="Send prompt (Enter)" disabled>
+              <svg class="icon send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+              <span class="stop-spinner" id="stopSpinner" style="display: none;">
+                <svg class="icon stop-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                </svg>
+              </span>
+            </button>
+          </div>
+        </form>
+
+        <div class="input-footer-note">
+          <span>ChatGPT can make mistakes. Verify important financial details.</span>
+          <span class="separator">•</span>
+          <span class="hotkey-tip">Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for new line</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Settings & Webhook Modal -->
+  <div class="modal-backdrop" id="settingsModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <h2>Settings & Configuration</h2>
+        </div>
+        <button class="modal-close-btn" id="closeSettingsModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- n8n Webhook Endpoint -->
+        <div class="form-group">
+          <label for="webhookUrlInput">
+            <span>n8n Webhook Production URL</span>
+            <span class="label-tag">Active Endpoint</span>
+          </label>
+          <div class="input-with-action">
+            <input type="url" id="webhookUrlInput" value="https://sathya14.app.n8n.cloud/webhook/chat" placeholder="https://your-n8n-domain/webhook/chat">
+            <button type="button" class="btn btn-secondary" id="testWebhookBtn">
+              <span>Test Connection</span>
+            </button>
+          </div>
+          <div class="connection-test-result" id="connectionTestResult" style="display: none;"></div>
+          <p class="form-hint">Sends <code>{ chatInput: string }</code> via POST directly to your n8n workflow.</p>
+        </div>
+
+        <!-- Audio Tones Toggle -->
+        <div class="form-group toggle-group">
+          <div class="toggle-info">
+            <span class="toggle-title">Sound Effects</span>
+            <span class="toggle-desc">Subtle futuristic acoustic tones on send & receive</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="soundToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Typewriter Streaming Animation Toggle -->
+        <div class="form-group toggle-group">
+          <div class="toggle-info">
+            <span class="toggle-title">Typewriter Streaming Animation</span>
+            <span class="toggle-desc">Simulate live ChatGPT typewriter response streaming</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="streamingToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Speech Synthesis Voice Selection -->
+        <div class="form-group">
+          <label for="ttsVoiceSelect">Read Aloud Voice (Text-to-Speech)</label>
+          <select id="ttsVoiceSelect" class="form-select">
+            <option value="default">Default System Voice</option>
+          </select>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="form-group danger-zone">
+          <div class="danger-info">
+            <span class="danger-title">Clear Chat History</span>
+            <span class="danger-desc">Delete all locally saved conversations from this browser</span>
+          </div>
+          <button type="button" class="btn btn-danger" id="clearAllHistoryBtn">Clear All</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelSettingsBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveSettingsBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

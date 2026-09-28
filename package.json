@@ -1,0 +1,20 @@
+{
+  "name": "chatgpt-n8n-chatbot-ui",
+  "version": "1.0.0",
+  "description": "ChatGPT-like Chat UI connected to n8n AI cloud webhook",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "chatgpt",
+    "n8n",
+    "chatbot",
+    "ui",
+    "ai",
+    "icici-bank"
+  ],
+  "author": "Sathya",
+  "license": "MIT"
+}
